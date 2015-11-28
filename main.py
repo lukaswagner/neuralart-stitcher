@@ -1,11 +1,14 @@
 import subprocess
-import os.path
+import os
 from PIL import Image
 import math
+import time
 
 neuralart_dir = '/home/lukas/Dokumente/neuralart-master/'
-temp_dir = os.path.abspath('temp/')
-frame_dir = temp_dir + 'frames/'
+temp_dir = os.path.abspath('temp')
+if not os.path.exists(temp_dir):
+    os.makedirs(temp_dir)
+frame_dir = temp_dir + '/frames/'
 output_file = os.path.abspath('output.jpg')
 style = '/home/lukas/Dokumente/neuralart-master/input/vg_field.jpg'
 content = '/home/lukas/Dokumente/neuralart-master/input/part_test_2.jpg'
@@ -85,12 +88,12 @@ def splitHorizontally(row):
                 height
             )
         )
-        print('running neuralart... ', end=' ')
-        temp_file = temp_dir + 'temp.jpg'
+        print('>> running neuralart on block ' + str(i * 0.5 + 1) + ' ...')
+        temp_file = temp_dir + '/temp.jpg'
         block.save(temp_file)
         runNeuralart(temp_file)
         block = Image.open(temp_file)
-        print('done')
+        print('>> running neuralart on block ' + str(i * 0.5 + 1) + ' done')
         # TODO: blended pasting
         row.paste(
             block,
@@ -112,9 +115,9 @@ def splitVertically(image):
                 int(max([(i + 1) * 0.5 * ceilBlockHeight, height]))
             )
         )
-        print('splitting horizontally...')
+        print('> splitting row ' + str(i * 0.5 + 1) + ' horizontally...')
         row = splitHorizontally(row)
-        print('splitting horizontally done')
+        print('> splitting row ' + str(i * 0.5 + 1) + ' horizontally done')
         # TODO: blended pasting
         image.paste(
             row,
@@ -126,20 +129,23 @@ def splitVertically(image):
     return image
 
 def main():
+    start = time.time()
     print('starting neuaralart-stitcher')
-    print('loading input... ', end=' ')
+    print('loading input...', end=' ')
     image = Image.open(content)
     print('done')
-    print('calculating dimensions... ', end=' ')
+    print('calculating dimensions...', end=' ')
     image = calcDimensionsAndResize(image)
     print('done')
     print('splitting vertically...')
     image = splitVertically(image)
-    print('plitting vertically done')
-    print('showing and saving output... ', end=' ')
+    print('splitting vertically done ')
+    print('showing and saving output...', end=' ')
     image.show()
     image.save(output_file)
     print('done')
+    stop = time.time()
+    print('total calculation time: ' + "%.3f" % round(stop - start, 3) + ' seconds')
     print('exiting neuralart-stitcher')
 
 if __name__ == "__main__":
