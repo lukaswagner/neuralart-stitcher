@@ -11,7 +11,7 @@ if not os.path.exists(temp_dir):
 frame_dir = temp_dir + '/frames/'
 output_file = os.path.abspath('output.jpg')
 style = '/home/lukas/Dokumente/neuralart-master/input/vg_field.jpg'
-content = '/home/lukas/Dokumente/neuralart-master/input/part_test_2.jpg'
+content = '/home/lukas/Dokumente/neuralart-master/input/IMG_3152.JPG'
 style_factor = 2E10
 smoothness = 1E-1
 num_iters = 10
@@ -21,6 +21,9 @@ blockCountH = -1
 blockCountV = -1
 blockHeight = 333
 blockWidth = 500
+mask_h = Image.open('mask_h.png')
+mask_v = Image.open('mask_v.png')
+mask_full = Image.open('mask_full.png')
 
 # def parseArgs():
 #     try:
@@ -79,54 +82,59 @@ def calcDimensionsAndResize(image):
 
 def splitHorizontally(row):
     ceilBlockWidth = math.ceil(blockWidth)
+    outRow = Image.new("RGB", (width, row.size[1]))
     for i in range(0, blockCountH * 2 - 1):
-        block = row.copy().crop(
-            (
-                int(i * 0.5 * ceilBlockWidth),
-                0,
-                int(max([(i + 1) * 0.5 * ceilBlockWidth, width])),
-                height
-            )
+        cropbox = (
+            int(i * 0.5 * ceilBlockWidth),
+            0,
+            int(min([(i + 2) * 0.5 * ceilBlockWidth, width])),
+            row.size[1]
         )
+        block = row.crop(cropbox)
         print('>> running neuralart on block ' + str(i * 0.5 + 1) + ' ...')
         temp_file = temp_dir + '/temp.jpg'
         block.save(temp_file)
         runNeuralart(temp_file)
         block = Image.open(temp_file)
         print('>> running neuralart on block ' + str(i * 0.5 + 1) + ' done')
-        # TODO: blended pasting
-        row.paste(
-            block,
-            (
-                int(i * 0.5 * ceilBlockWidth),
-                0
-            )
+        pastepos = (
+            int(i * 0.5 * ceilBlockWidth),
+            0
         )
-    return row
+        if(i == 0):
+            blockMask = mask_full.resize(block.size)
+        else:
+            blockMask = mask_h.resize(block.size)
+        outRow.paste(block, pastepos, blockMask)
+        # print('CROPBOX: ' + str(cropbox) + ' PASTEPOS: ' + str(pastepos))
+    return outRow
 
 def splitVertically(image):
     ceilBlockHeight = math.ceil(blockHeight)
+    outImage = Image.new("RGB", (width, height))
     for i in range(0, blockCountV * 2 - 1):
-        row = image.copy().crop(
-            (
-                0,
-                int(i * 0.5 * ceilBlockHeight),
-                width,
-                int(max([(i + 1) * 0.5 * ceilBlockHeight, height]))
-            )
+        cropbox = (
+            0,
+            int(i * 0.5 * ceilBlockHeight),
+            width,
+            int(min([(i + 2) * 0.5 * ceilBlockHeight, height]))
         )
+        row = image.crop(cropbox)
         print('> splitting row ' + str(i * 0.5 + 1) + ' horizontally...')
         row = splitHorizontally(row)
         print('> splitting row ' + str(i * 0.5 + 1) + ' horizontally done')
-        # TODO: blended pasting
-        image.paste(
-            row,
-            (
-                0,
-                int(i * 0.5 * ceilBlockHeight)
-            )
+        pastepos = (
+            0,
+            int(i * 0.5 * ceilBlockHeight)
         )
-    return image
+        if(i == 0):
+            rowMask = mask_full.resize(row.size)
+        else:
+            rowMask = mask_v.resize(row.size)
+        #outImage.paste(row, pastepos, rowMask)
+        outImage.paste(row, pastepos, rowMask)
+        # print('CROPBOX: ' + str(cropbox) + ' PASTEPOS: ' + str(pastepos))
+    return outImage
 
 def main():
     start = time.time()
@@ -137,6 +145,7 @@ def main():
     print('calculating dimensions...', end=' ')
     image = calcDimensionsAndResize(image)
     print('done')
+    print('output width: ' + str(width) + ' output height: ' + str(height) + ' blockCountH: ' + str(blockCountH) + ' blockCountV: ' + str(blockCountV) + ' blockWidth: ' + str(blockWidth) + ' blockHeight: ' + str(blockHeight))
     print('splitting vertically...')
     image = splitVertically(image)
     print('splitting vertically done ')
