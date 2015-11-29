@@ -3,19 +3,19 @@ import os
 from PIL import Image
 import math
 import time
+from decimal import Decimal
 
 neuralart_dir = '/home/lukas/Dokumente/neuralart-master/'
 temp_dir = os.path.abspath('temp')
 if not os.path.exists(temp_dir):
     os.makedirs(temp_dir)
 frame_dir = temp_dir + '/frames/'
-output_file = os.path.abspath('output.jpg')
 style = '/home/lukas/Dokumente/neuralart-master/input/vg_field.jpg'
 content = '/home/lukas/Dokumente/neuralart-master/input/IMG_3152.JPG'
-style_factor = 2E10
-smoothness = 1E-1
-num_iters = 10
-width = 1000
+style_factor = 2E8
+smoothness = 3E0
+num_iters = 20
+width = 2500
 height = -1
 blockCountH = -1
 blockCountV = -1
@@ -24,6 +24,14 @@ blockWidth = 500
 mask_h = Image.open('mask_h.png')
 mask_v = Image.open('mask_v.png')
 mask_full = Image.open('mask_full.png')
+output_file = os.path.abspath(
+    'output_' +
+    str(os.path.basename(content).split(".")[0]) + '_' +
+    '%.0E' % Decimal(style_factor) + '_' +
+    '%.0E' % Decimal(smoothness) + '_' +
+    str(num_iters) +
+    '.jpg'
+)
 
 # def parseArgs():
 #     try:
@@ -50,7 +58,7 @@ def runNeuralart(temp_file):
         '--style_factor', str(style_factor),
         '--smoothness', str(smoothness),
         '--display_interval', str(0),
-        '--num_iters', str(10),
+        '--num_iters', str(num_iters),
         '--output_dir', frame_dir,
         '--size', str(500) #same size as temp_file
     ]
@@ -58,7 +66,7 @@ def runNeuralart(temp_file):
     subproc.wait()
     copyArgs = [
         'cp',
-        frame_dir + '0010.jpg',
+        frame_dir + str(num_iters).zfill(4) + '.jpg',
         temp_file
     ]
     copyproc = subprocess.Popen(copyArgs)
